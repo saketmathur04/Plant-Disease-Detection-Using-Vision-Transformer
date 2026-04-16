@@ -7,7 +7,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
 // API configuration
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://54.209.57.225:5000';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://59a0-54-209-57-225.ngrok-free.app';
 
 const queryClient = new QueryClient();
 

@@ -95,7 +95,13 @@ const Index = () => {
     formData.append("file", selectedFile);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/predict`, { method: "POST", body: formData });
+      const response = await fetch(`${API_BASE_URL}/predict`, { 
+        method: "POST", 
+        body: formData,
+        headers: {
+          "ngrok-skip-browser-warning": "any-value"
+        }
+      });
       const result: BackendPrediction = await response.json();
       if (!result.success) throw new Error(result.message);
 

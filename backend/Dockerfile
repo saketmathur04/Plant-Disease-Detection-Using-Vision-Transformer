@@ -13,8 +13,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 
 # Install dependencies (reduce image size avoiding cache)
-# Note: PyTorch downloading might take a few minutes
-RUN pip install --no-cache-dir -r requirements.txt
+# Note: Using CPU-only PyTorch index to prevent downloading massive NVIDIA packages
+RUN pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.txt
 
 # Copy all the remaining backend files
 COPY . .

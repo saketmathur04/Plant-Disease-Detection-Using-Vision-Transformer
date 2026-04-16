@@ -1,0 +1,39 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+        
+    - name: Install frontend dependencies
+      working-directory: ./frontend
+      run: npm install
+      
+    - name: Build frontend static files
+      working-directory: ./frontend
+      run: npm run build
+
+  test-backend-docker:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+      
+    - name: Test Docker Compose Build
+      run: |
+        # Verifies that your Flask backend can be containerized successfully
+        docker-compose build

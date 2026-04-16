@@ -161,6 +161,7 @@ def predict():
             return jsonify({"success": False, "error": "Invalid file type"}), 400
 
         # Convert immediately so we can check visual pixel-hash and heuristics
+        file_bytes = file.read()
         image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
         pixel_data = image.resize((64, 64)).tobytes()
         visual_hash = hashlib.md5(pixel_data).hexdigest()

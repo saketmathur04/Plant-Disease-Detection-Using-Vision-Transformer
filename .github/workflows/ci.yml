@@ -36,4 +36,4 @@ jobs:
     - name: Test Docker Compose Build
       run: |
         # Verifies that your Flask backend can be containerized successfully
-        docker-compose build
+        docker compose build

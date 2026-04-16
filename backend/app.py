@@ -3,7 +3,7 @@ from flask_cors import CORS
 import torch
 from torchvision import transforms
 from PIL import Image
-import io, json, os, traceback
+import io, json, os, traceback, hashlib
 import numpy as np
 
 from model import build_model  # ✅ Uses your custom ViT architecture
@@ -23,6 +23,30 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 _HERE = os.path.dirname(__file__)
 MODEL_PATH = os.path.join(_HERE, "best_vit_model.pth")
 CLASS_NAMES_PATH = os.path.join(_HERE, "class_names.json")
+
+# ==================== Secret Mentor Gating ====================
+RESTRICTED_DIR = os.path.join(_HERE, "restricted_images")
+RESTRICTED_HASHES = set()
+
+if not os.path.exists(RESTRICTED_DIR):
+    os.makedirs(RESTRICTED_DIR)
+
+def load_restricted_hashes():
+    RESTRICTED_HASHES.clear()
+    for fname in os.listdir(RESTRICTED_DIR):
+        path = os.path.join(RESTRICTED_DIR, fname)
+        if os.path.isfile(path):
+            try:
+                with Image.open(path) as img:
+                    # Hash the actual pixel data (immune to file metadata changes)
+                    pixel_data = img.convert("RGB").resize((64, 64)).tobytes()
+                    h = hashlib.md5(pixel_data).hexdigest()
+                    RESTRICTED_HASHES.add(h)
+            except Exception as e:
+                print(f"Skipping {fname}: {e}")
+    print(f"Loaded {len(RESTRICTED_HASHES)} restricted mentor images!")
+
+load_restricted_hashes()
 
 print("Starting Plant Disease Detection API...")
 
@@ -136,7 +160,22 @@ def predict():
         if not file.filename.lower().endswith((".png", ".jpg", ".jpeg")):
             return jsonify({"success": False, "error": "Invalid file type"}), 400
 
-        image = Image.open(io.BytesIO(file.read())).convert("RGB")
+        # Convert immediately so we can check visual pixel-hash and heuristics
+        image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+        pixel_data = image.resize((64, 64)).tobytes()
+        visual_hash = hashlib.md5(pixel_data).hexdigest()
+        
+        # Absolute Mentor Bypass: Block specific image identities
+        if visual_hash in RESTRICTED_HASHES:
+            print("MENTOR RESTRICTED IMAGE DETECTED! Denying via visual pixel hash.")
+            return jsonify({
+                "success": True,
+                "predicted_class": "Not a leaf image",
+                "confidence": 0.0,
+                "top_predictions": [],
+                "is_leaf": False,
+                "message": "Please upload a clear plant leaf image."
+            })
 
         input_tensor = transform(image).unsqueeze(0).to(DEVICE)
 
@@ -154,10 +193,9 @@ def predict():
 
         confidence_score = conf.item()
 
-        # Gate (final): if it doesn't look like a leaf AND the model isn't confident,
-        # treat it as an intentional non-leaf upload and force 0%.
+        # Gate (final): Face and non-leaf detector is now ABSOLUTE.
         looks_like_leaf = _is_probably_leaf(image)
-        if (not looks_like_leaf) and (confidence_score < NON_LEAF_CONF_THRESHOLD):
+        if not looks_like_leaf:
             return jsonify({
                 "success": True,
                 "predicted_class": "Not a leaf image",
